@@ -111,7 +111,7 @@ def encode(
     channel_idx = _validate_channel(channel)
 
     msg_bits = _int_to_bits(len(message.encode('utf-8')), 32) + _text_to_bits(message)
-    capacity = len(indices) if channel_idx is not None or alpha else len(indices) * 3
+    capacity = (len(indices) * (1 if channel or alpha else 3)) // 8 - 4
 
     if len(msg_bits) > capacity:
         raise PayloadTooLargeError(f"Message too large. Only {capacity} bits available.")

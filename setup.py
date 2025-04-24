@@ -5,7 +5,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="stegopy",
-    version="0.1.1",
+    version="0.1.2",
     author="JeremyDeveloper",
     description="A deterministic, no-magic Python toolkit for hiding messages in media. Built with hyperfixation.",
     long_description=long_description,

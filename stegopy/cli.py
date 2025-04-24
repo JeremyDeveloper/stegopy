@@ -70,7 +70,7 @@ def main():
         
     if args.capacity:
         try:
-            cap = _estimate_capacity(args.input, channel=args.channel, alpha=args.alpha)
+            cap = _estimate_capacity(args.input, region=args.region, channel=args.channel, alpha=args.alpha)
             print(f"🧠 Estimated capacity: {cap} UTF-8 characters")
         except Exception as e:
             print(f"❌ Capacity estimation failed: {e}")

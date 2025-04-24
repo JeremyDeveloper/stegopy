@@ -1,25 +1,10 @@
-import wave, aifc, contextlib, os, struct
+import os, struct
 from stegopy.utils import (
-    _int_to_bits, _bits_to_int, _text_to_bits, _bits_to_text
+    _int_to_bits, _bits_to_int, _text_to_bits, _bits_to_text, _open_audio
 )
 from stegopy.errors import (
     UnsupportedFormatError, PayloadTooLargeError, InvalidStegoDataError
 )
-
-def _open_audio(path: str, mode: str) -> contextlib.closing:
-    """
-    Opens a WAV or AIFF file in read or write mode.
-
-    Args:
-        path (str): Path to the audio file (.wav, .aif, or .aiff).
-        mode (str): Mode to open the file in ('rb' or 'wb').
-
-    Returns:
-        contextlib.closing: Context manager with the opened wave/aifc stream.
-    """
-    if path.lower().endswith(".aiff") or path.lower().endswith(".aif"):
-        return contextlib.closing(aifc.open(path, mode))
-    return contextlib.closing(wave.open(path, mode))
 
 def encode(input_path: str, output_path: str, message: str) -> None:
     """

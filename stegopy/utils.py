@@ -1,6 +1,6 @@
-import mimetypes, os, wave
+import mimetypes, contextlib, os, wave, aifc
 from typing import List, Optional
-from stegopy.errors import InvalidStegoDataError
+from stegopy.errors import InvalidStegoDataError, UnsupportedFormatError
 from PIL import Image
 
 def _is_audio_file(path: str) -> bool:
@@ -89,42 +89,72 @@ def _bits_to_text(bits: List[int]) -> str:
         return bytes(chars).decode('utf-8')
     except UnicodeDecodeError:
         raise InvalidStegoDataError("Decoded data is not valid UTF-8. Image may not contain stego data.")
-    
-def _estimate_capacity(path: str, channel: Optional[str] = None, alpha: Optional[bool] = False) -> int:
+
+def _open_audio(path: str, mode: str) -> contextlib.closing:
     """
-    Estimate the maximum number of UTF-8 characters that can be embedded in a media file.
+    Opens a WAV or AIFF file in read or write mode.
 
     Args:
-        path (str): Path to the media file.
-        channel (str, optional): Channel used for steganography ('r', 'g', or 'b'). Only for images.
-        alpha (bool, optional): Use alpha channel for embedding. Only for images.
+        path (str): Path to the audio file (.wav, .aif, or .aiff).
+        mode (str): Mode to open the file in ('rb' or 'wb').
 
     Returns:
-        int: Approximate character capacity based on available bits divided by 8.
+        contextlib.closing: Context manager with the opened wave/aifc stream.
     """
+    if path.lower().endswith(".aiff") or path.lower().endswith(".aif"):
+        return contextlib.closing(aifc.open(path, mode))
+    return contextlib.closing(wave.open(path, mode))
 
+def _estimate_capacity(path: str, region: Optional[str] = None, channel: Optional[str] = None, alpha: bool = False) -> int:
+    """
+    Estimate the number of UTF-8 characters that can be hidden in the file.
+
+    Args:
+        path (str): Path to the image or audio file.
+        region (Optional[str]): Region to encode into (if any, for images).
+        channel (Optional[str]): Channel to encode into (if any, for images).
+        alpha (Optional[bool]): Whether alpha channel is used (for images).
+
+    Returns:
+        int: Estimated number of UTF-8 characters that can be embedded.
+
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        UnsupportedFormatError: If the file is not a supported type.
+    """
     if not os.path.exists(path):
         raise FileNotFoundError(f"File not found: {path}")
 
-    if _is_image_file(path):
-        with Image.open(path) as img:
-            pixels = list(img.convert("RGBA" if alpha else "RGB").getdata())
-            
-            if alpha or channel:
-                total_bits = len(pixels)
-            else:
-                total_bits = len(pixels) * 3
-
-            return max(0, (total_bits - 32) // 8)
-
     if _is_audio_file(path):
-        with wave.open(path, 'rb') as audio:
-            if audio.getsampwidth() != 2 or audio.getnchannels() != 1:
-                raise ValueError("Only 16-bit mono PCM WAV files are supported.")
+        with _open_audio(path, 'rb') as audio:
+            params = audio.getparams()
+            if params.sampwidth != 2 or params.nchannels != 1:
+                raise UnsupportedFormatError("Only 16-bit mono PCM audio is supported.")
+            bits = len(audio.readframes(audio.getnframes())) * 8 // 16
+            return (bits - 32) // 8
 
-            frames = audio.getnframes()
-            total_bits = frames
+    if _is_image_file(path):
+        img = Image.open(path)
+        img = img.convert("RGBA" if alpha else "RGB")
+        width, height = img.size
 
-            return max(0, (total_bits - 32) // 8)
+        if region:
+            x_half = width // 2
+            y_half = height // 2
+            if region == "center":
+                region_size = x_half * y_half
+            else:
+                region_size = x_half * y_half
+        else:
+            region_size = width * height
 
-    return 0
+        if alpha:
+            bits = region_size
+        elif channel:
+            bits = region_size
+        else:
+            bits = region_size * 3
+
+        return (bits - 32) // 8
+
+    raise UnsupportedFormatError("Only image and audio files are supported.")

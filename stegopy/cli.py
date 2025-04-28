@@ -2,6 +2,7 @@ import argparse, os, sys, random
 from stegopy.image import _core as image_core
 from stegopy.audio import _core as audio_core
 from stegopy.utils import _is_audio_file, _is_image_file, _estimate_capacity
+from stegopy.errors import InvalidStegoDataError, PayloadTooLargeError, UnsupportedFormatError
 
 def stegosaurus():
     STEGOSAUR_QUOTES = [
@@ -64,6 +65,10 @@ def main():
         parser.print_help()
         sys.exit(1)
 
+    if not args.input:
+        print("❌ You must provide an input file.")
+        sys.exit(1)
+
     if not os.path.exists(args.input):
         print(f"❌ File not found: {args.input}")
         sys.exit(1)
@@ -84,17 +89,23 @@ def main():
             print("❌ Encoding requires both --input and --output.")
             sys.exit(1)
 
-        if _is_audio_file(args.input):
-            audio_core.encode(args.input, args.output, args.message)
-        elif _is_image_file(args.input):
-            image_core.encode(
-                args.input, args.output, args.message,
-                region=args.region, channel=args.channel, alpha=args.alpha
-            )
-        else:
-            print("❌ Unsupported file type for encoding. Only images and audio files are supported.")
+        try:
+            if _is_audio_file(args.input):
+                audio_core.encode(args.input, args.output, args.message)
+            elif _is_image_file(args.input):
+                image_core.encode(
+                    args.input, args.output, args.message,
+                    region=args.region, channel=args.channel, alpha=args.alpha
+                )
+            else:
+                print("❌ Unsupported file type for encoding. Only images and audio files are supported.")
+                sys.exit(1)
+        except PayloadTooLargeError:
+            print("❌ Encoding failed, the message may be too large for the input file. Try a smaller message or use the capacity estimation tool via -c.")
             sys.exit(1)
-
+        except UnsupportedFormatError:
+            print("❌ Unsupported file format. Please provide a supported image or audio file format, such as a PNG, WEBP, WAV, AIFF, or any other supported format.")
+            sys.exit(1)
         return
 
     if args.decode:
@@ -102,17 +113,23 @@ def main():
             print("❌ You must provide an input file when decoding.")
             sys.exit(1)
 
-        if _is_audio_file(args.input):
-            message = audio_core.decode(args.input)
-        elif _is_image_file(args.input):
-            message = image_core.decode(
-                args.input,
-                region=args.region, channel=args.channel, alpha=args.alpha
-            )
-        else:
-            print("❌ Unsupported file type for decoding. Only images and audio files are supported.")
+        try:
+            if _is_audio_file(args.input):
+                message = audio_core.decode(args.input)
+            elif _is_image_file(args.input):
+                message = image_core.decode(
+                    args.input,
+                    region=args.region, channel=args.channel, alpha=args.alpha
+                )
+            else:
+                print("❌ Unsupported file type for decoding. Only images and audio files are supported.")
+                sys.exit(1)
+        except InvalidStegoDataError:
+            print(f"❌ Decoding failed, the message may be corrupted or incomplete.")
             sys.exit(1)
-
+        except UnsupportedFormatError:
+            print("❌ Unsupported file format. Please provide a supported image or audio file format, such as a PNG, WEBP, WAV, AIFF, or any other supported format.")
+            sys.exit(1)
         print(f"-> {message}")
         return
 

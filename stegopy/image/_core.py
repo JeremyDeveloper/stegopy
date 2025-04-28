@@ -87,7 +87,7 @@ def encode(
         message (str): Message to embed.
         region (Optional[str]): Region of the image to embed into.
         channel (Optional[str]): Specific RGB channel to use.
-        alpha (bool): Whether to use the alpha channel.
+        alpha (Optional[bool]): Whether to use the alpha channel.
 
     Raises:
         FileNotFoundError: If input image does not exist.
@@ -156,7 +156,7 @@ def decode(
         image_path (str): Image file containing stego data.
         region (Optional[str]): Region used during encoding.
         channel (Optional[str]): Channel used during encoding.
-        alpha (bool): If message was encoded in alpha channel.
+        alpha (Optional[bool]): If message was encoded in alpha channel.
 
     Returns:
         str: Decoded message string.

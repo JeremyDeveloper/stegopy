@@ -3,6 +3,7 @@ from stegopy.image import _core as image_core
 from stegopy.audio import _core as audio_core
 from stegopy.utils import _is_audio_file, _is_image_file, _estimate_capacity
 from stegopy.errors import InvalidStegoDataError, PayloadTooLargeError, UnsupportedFormatError
+from PIL import Image
 
 def stegosaurus():
     STEGOSAUR_QUOTES = [
@@ -46,7 +47,7 @@ def main():
         usage="stegopy [message] <-e/--encode | -d/--decode> <-i input> [-o output] [--channel r/g/b] [--region center/topleft/topright/bottomleft/bottomright] [--alpha]"
     )
 
-    parser.add_argument("message", nargs="?", help="Message to encode (required with --encode)")
+    parser.add_argument("payload", nargs="?", help="Payload to encode (required with --encode)")
     parser.add_argument("-e", "--encode", action="store_true", help="Encode mode")
     parser.add_argument("-d", "--decode", action="store_true", help="Decode mode")
     parser.add_argument("-i", "--input", required=False, help="Input file (image/audio)")
@@ -82,8 +83,8 @@ def main():
         return
 
     if args.encode:
-        if not args.message:
-            print("❌ You must provide a message when encoding.")
+        if not args.payload:
+            print("❌ You must provide a payload when encoding.")
             sys.exit(1)
         if not args.input or not args.output:
             print("❌ Encoding requires both --input and --output.")
@@ -91,10 +92,10 @@ def main():
 
         try:
             if _is_audio_file(args.input):
-                audio_core.encode(args.input, args.output, args.message)
+                audio_core.encode(args.input, args.output, args.payload)
             elif _is_image_file(args.input):
                 image_core.encode(
-                    args.input, args.output, args.message,
+                    args.input, args.output, args.payload,
                     region=args.region, channel=args.channel, alpha=args.alpha
                 )
             else:
@@ -130,6 +131,14 @@ def main():
         except UnsupportedFormatError:
             print("❌ Unsupported file format. Please provide a supported image or audio file format, such as a PNG, WEBP, WAV, AIFF, or any other supported format.")
             sys.exit(1)
+
+        if isinstance(message, Image.Image):
+            if not args.output:
+                print("❌ Decoded payload is an image, but no --output file was specified.")
+                sys.exit(1)
+            message.save(args.output)
+            return
+
         print(f"-> {message}")
         return
 

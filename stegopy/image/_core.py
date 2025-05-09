@@ -2,7 +2,7 @@ import os
 from typing import List, Optional
 from PIL import Image, UnidentifiedImageError
 from stegopy.utils import (
-    _int_to_bits, _bits_to_int, _text_to_bits, _bits_to_text, _is_image_file
+    _int_to_bits, _bits_to_int, _text_to_bits, _bits_to_text, _image_to_bits, _bits_to_image, _is_image_file
 )
 from stegopy.errors import (
     UnsupportedFormatError, PayloadTooLargeError, InvalidStegoDataError
@@ -73,18 +73,18 @@ def _get_region_indices(width: int, height: int, region: Optional[str]) -> List[
 def encode(
     image_path: str,
     output_path: str,
-    message: str,
+    payload: str,
     region: Optional[str] = None,
     channel: Optional[str] = None,
     alpha: Optional[bool] = False
 ) -> None:
     """
-    Encodes a UTF-8 message into the LSB of the image.
+    Encodes a payload into the LSB of the image.
 
     Args:
         image_path (str): Path to the input image file.
         output_path (str): Path where the stego image will be saved.
-        message (str): Message to embed.
+        payload (str): Payload to embed.
         region (Optional[str]): Region of the image to embed into.
         channel (Optional[str]): Specific RGB channel to use.
         alpha (Optional[bool]): Whether to use the alpha channel.
@@ -92,7 +92,7 @@ def encode(
     Raises:
         FileNotFoundError: If input image does not exist.
         UnsupportedFormatError: If image cannot be read or is invalid.
-        PayloadTooLargeError: If message exceeds capacity.
+        PayloadTooLargeError: If payload exceeds capacity.
     """
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image file not found: {image_path}")
@@ -109,12 +109,21 @@ def encode(
     pixels = img.load()
     indices = _get_region_indices(width, height, region)
     channel_idx = _validate_channel(channel)
-
-    msg_bits = _int_to_bits(len(message.encode('utf-8')), 32) + _text_to_bits(message)
-    capacity = (len(indices) * (1 if channel or alpha else 3)) // 8 - 4
+    msg_type = "T"
+    
+    if os.path.exists(payload) and _is_image_file(payload):
+        msg_type = "I"
+        msg_bits = _image_to_bits(Image.open(payload))
+        length_bits = _int_to_bits(len(msg_bits) // 8, 32)    
+    else: 
+        msg_bits = _text_to_bits(payload)
+        length_bits = _int_to_bits(len(payload.encode('utf-8')), 32)
+    
+    msg_bits = length_bits + _int_to_bits(ord(msg_type), 8) + msg_bits
+    capacity = (len(indices) * (1 if channel or alpha else 3)) // 8 - 5
 
     if len(msg_bits) > capacity:
-        raise PayloadTooLargeError(f"Message too large. Only {capacity} bits available.")
+        raise PayloadTooLargeError(f"Payload too large. Only {capacity} bits available.")
 
     bit_index = 0
     for x, y in indices:
@@ -150,21 +159,21 @@ def decode(
     alpha: Optional[bool] = False
 ) -> str:
     """
-    Decodes a UTF-8 message from the LSBs of the image.
+    Decodes a payload from the LSBs of the image.
 
     Args:
         image_path (str): Image file containing stego data.
         region (Optional[str]): Region used during encoding.
         channel (Optional[str]): Channel used during encoding.
-        alpha (Optional[bool]): If message was encoded in alpha channel.
+        alpha (Optional[bool]): If payload was encoded in alpha channel.
 
     Returns:
-        str: Decoded message string.
+        str: The decoded payload..
 
     Raises:
         FileNotFoundError: If file does not exist.
         UnsupportedFormatError: If image format is invalid.
-        InvalidStegoDataError: If message is corrupted or incomplete.
+        InvalidStegoDataError: If payload is corrupted or incomplete.
     """
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Image file not found: {image_path}")
@@ -193,9 +202,15 @@ def decode(
             bits.extend((pixel[0] & 1, pixel[1] & 1, pixel[2] & 1))
 
     msg_len = _bits_to_int(bits[:32])
-    msg_bits = bits[32:32 + (msg_len * 8)]
+    msg_type = chr(_bits_to_int(bits[32:40]))
+    msg_bits = bits[40:40 + (msg_len * 8)]
 
     if len(msg_bits) < msg_len * 8:
-        raise InvalidStegoDataError("Message appears to be incomplete or corrupted.")
+        raise InvalidStegoDataError("Payload appears to be incomplete or corrupted.")
 
-    return _bits_to_text(msg_bits)
+    if msg_type == "T":
+        return _bits_to_text(msg_bits)
+    elif msg_type == "I":
+        return _bits_to_image(msg_bits)
+
+    raise InvalidStegoDataError("Payload appears to be incomplete or corrupted.")

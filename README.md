@@ -41,6 +41,7 @@ It is not built for configurability. It’s built for **peace of mind** — the 
 ## ✅ Features
 
 - 🖼️ Image Steganography
+  - Hide text or images inside other images
   - RGB LSB embedding (actually easy to reason about)
   - R/G/B channel-only mode, if you're picky
   - Alpha channel encoding — the closest you’ll get to invisible
@@ -48,7 +49,9 @@ It is not built for configurability. It’s built for **peace of mind** — the 
   - Fully combinable: region + channel + alpha? Yes.
 
 - 🔊 Audio Steganography
-  - LSB encoding for **16-bit PCM mono WAV and AIFF** files
+  - Hide text or images inside **16-bit PCM mono WAV and AIFF** files
+  - Bit-level LSB encoding across all samples
+  - Same predictable, reversible structure as image hiding
 
 - 🔤 Full UTF-8 compatibility (multi-byte safe, emoji-friendly)
 - 🧪 **40+ unit tests** — full coverage with low execution time
@@ -172,9 +175,23 @@ Combine with region targetting:
 stegopy "top left green channel go brr" -e -i input.png -o out.png --channel g --region topleft
 ```
 
+Embed an image into another image:
+```bash
+stegopy payload.png -e -i carrier.png -o out.png
+```
+
+Decode and auto-save if its an image:
+```bash
+stegopy -d -i out.png -o carrier.png
+```
+
 For audio:
 ```bash
 stegopy "auditory hyperfixation" -e -i input.wav -o result.wav
 stegopy -d -i result.wav
+```
+```bash
+stegopy payload.png -e -i carrier.wav -o out.wav
+stegopy -d -i out.wav -o carrier.png
 ```
 ❗ Only 16-bit PCM mono WAVs and AIFFs allowed. If you're here trying to LSB a `.flac`, I’m going to assume you're from the future.

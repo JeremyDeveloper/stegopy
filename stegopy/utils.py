@@ -1,4 +1,4 @@
-import mimetypes, contextlib, os, wave, aifc
+import mimetypes, contextlib, io, os, wave, aifc
 from typing import List, Optional
 from stegopy.errors import InvalidStegoDataError, UnsupportedFormatError
 from PIL import Image
@@ -90,6 +90,43 @@ def _bits_to_text(bits: List[int]) -> str:
     except UnicodeDecodeError:
         raise InvalidStegoDataError("Decoded data is not valid UTF-8. Image may not contain stego data.")
 
+def _image_to_bits(img: Image.Image) -> List[int]:
+    """
+    Convert a PIL image to a flat list of bits representing the image file.
+
+    The image is serialized in-memory using lossless PNG format, then each byte
+    of the file is converted to its 8-bit binary representation.
+
+    Args:
+        img (Image.Image): PIL Image object to convert.
+
+    Returns:
+        List[int]: A flat list of bits (0s and 1s) representing the serialized image.
+    """
+    with io.BytesIO() as buffer:
+        img.save(buffer, format="PNG")
+        raw_bytes = buffer.getvalue()
+    return [bit for byte in raw_bytes for bit in _int_to_bits(byte, 8)]
+
+def _bits_to_image(bits: List[int]) -> Image.Image:
+    """
+    Convert a list of bits back into a PIL Image.
+
+    This reconstructs a valid image from raw bit data by grouping every 8 bits into bytes,
+    reassembling the full byte stream, and loading it into a PIL Image via an in-memory buffer.
+
+    Args:
+        bits (List[int]): Bit list representing an encoded image (must be valid image bytes).
+
+    Returns:
+        Image.Image: PIL Image reconstructed from the input bitstream.
+
+    Raises:
+        UnidentifiedImageError: If the resulting byte stream is not a valid image format.
+    """
+    byte_data = bytes([_bits_to_int(bits[i:i+8]) for i in range(0, len(bits), 8)])
+    return Image.open(io.BytesIO(byte_data))
+
 def _open_audio(path: str, mode: str) -> contextlib.closing:
     """
     Opens a WAV or AIFF file in read or write mode.
@@ -131,7 +168,7 @@ def _estimate_capacity(path: str, region: Optional[str] = None, channel: Optiona
             if params.sampwidth != 2 or params.nchannels != 1:
                 raise UnsupportedFormatError("Only 16-bit mono PCM audio is supported.")
             bits = len(audio.readframes(audio.getnframes())) * 8 // 16
-            return (bits - 32) // 8
+            return (bits - 40) // 8
 
     if _is_image_file(path):
         img = Image.open(path)
@@ -155,6 +192,6 @@ def _estimate_capacity(path: str, region: Optional[str] = None, channel: Optiona
         else:
             bits = region_size * 3
 
-        return (bits - 32) // 8
+        return (bits - 40) // 8
 
     raise UnsupportedFormatError("Only image and audio files are supported.")

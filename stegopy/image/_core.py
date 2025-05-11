@@ -1,6 +1,6 @@
 import os
 from typing import List, Optional
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageSequence, UnidentifiedImageError
 from stegopy.utils import (
     _int_to_bits, _bits_to_int, _text_to_bits, _bits_to_text, _image_to_bits, _bits_to_image, _is_image_file
 )
@@ -74,9 +74,10 @@ def encode(
     image_path: str,
     output_path: str,
     payload: str,
+    frame: Optional[int] = None,
     region: Optional[str] = None,
     channel: Optional[str] = None,
-    alpha: Optional[bool] = False
+    alpha: Optional[bool] = False,
 ) -> None:
     """
     Encodes a payload into the LSB of the image.
@@ -85,10 +86,11 @@ def encode(
         image_path (str): Path to the input image file.
         output_path (str): Path where the stego image will be saved.
         payload (str): Payload to embed.
+        frame (Optional[int]): Target frame index for animated images (e.g. GIF).
         region (Optional[str]): Region of the image to embed into.
         channel (Optional[str]): Specific RGB channel to use.
         alpha (Optional[bool]): Whether to use the alpha channel.
-
+        
     Raises:
         FileNotFoundError: If input image does not exist.
         UnsupportedFormatError: If image cannot be read or is invalid.
@@ -103,6 +105,16 @@ def encode(
         img = Image.open(image_path)
     except UnidentifiedImageError:
         raise UnsupportedFormatError("Unsupported or invalid image file.")
+
+    if frame is not None:
+        frames = [f.copy() for f in ImageSequence.Iterator(img)]
+        if not (0 <= frame < len(frames)):
+            raise ValueError(f"Frame {frame} is out of range. File has {len(frames)} frames.")
+        try:
+            img.seek(frame)
+        except EOFError:
+            raise UnsupportedFormatError("Unsupported or invalid image file.")
+        img = img.copy()
 
     img = img.convert("RGBA" if alpha else "RGB")
     width, height = img.size
@@ -150,10 +162,18 @@ def encode(
     elif ext == ".tiff":
         save_kwargs["compression"] = "none"
 
-    img.save(output_path, **save_kwargs)
+    if frame is not None:
+        frames[frame] = img
+        frames[0].save(
+            output_path,
+            save_all=True,
+            append_images=frames[1:]
+        )
+    else: img.save(output_path, **save_kwargs)
 
 def decode(
     image_path: str,
+    frame: Optional[int] = None,
     region: Optional[str] = None,
     channel: Optional[str] = None,
     alpha: Optional[bool] = False
@@ -163,12 +183,13 @@ def decode(
 
     Args:
         image_path (str): Image file containing stego data.
+        frame (Optional[int]): Target frame index for animated images (e.g. GIF).
         region (Optional[str]): Region used during encoding.
         channel (Optional[str]): Channel used during encoding.
         alpha (Optional[bool]): If payload was encoded in alpha channel.
 
     Returns:
-        str: The decoded payload..
+        str: The decoded payload.
 
     Raises:
         FileNotFoundError: If file does not exist.
@@ -184,6 +205,12 @@ def decode(
         img = Image.open(image_path)
     except UnidentifiedImageError:
         raise UnsupportedFormatError("Unsupported or invalid image file.")
+    
+    if frame is not None:
+        try:
+            img.seek(frame)
+        except EOFError:
+            raise UnsupportedFormatError("Unsupported or invalid image file.")
 
     img = img.convert("RGBA" if alpha else "RGB")
     width, height = img.size

@@ -1,6 +1,7 @@
 from stegopy.image import _core
+from typing import Optional
 
-def encode(image_path: str, output_path: str, payload: str, channel: str = "g") -> None:
+def encode(image_path: str, output_path: str, payload: str, channel: str = "g", frame: Optional[int] = None) -> None:
     """
     Encodes a payload into the least significant bits of a specific color channel of an image.
 
@@ -11,15 +12,16 @@ def encode(image_path: str, output_path: str, payload: str, channel: str = "g") 
         output_path (str): Path where the stego image will be saved.
         payload (str): Payload to embed.
         channel (str): Specific RGB channel to use. Default is "g".
+        frame (Optional[int]): Target frame index for animated images (e.g. GIF).
 
     Raises:
         FileNotFoundError: If input image does not exist.
         UnsupportedFormatError: If image cannot be read or is invalid.
         PayloadTooLargeError: If payload exceeds capacity.
     """
-    _core.encode(image_path, output_path, payload, channel=channel)
+    _core.encode(image_path, output_path, payload, frame=frame, channel=channel)
 
-def decode(image_path: str, channel: str = "g") -> str:
+def decode(image_path: str, channel: str = "g", frame: Optional[int] = None) -> str:
     """
     Decodes a payload from the least significant bits of a specific color channel of an image.
 
@@ -28,13 +30,14 @@ def decode(image_path: str, channel: str = "g") -> str:
     Args:
         image_path (str): Image file containing stego data.
         channel (str): Channel used during encoding. Default is "g".
+        frame (Optional[int]): Target frame index for animated images (e.g. GIF).
 
     Returns:
-        str: The decoded payload..
+        str: The decoded payload.
 
     Raises:
         FileNotFoundError: If file does not exist.
         UnsupportedFormatError: If image format is invalid.
         InvalidStegoDataError: If payload is corrupted or incomplete.
     """
-    return _core.decode(image_path, channel=channel)
+    return _core.decode(image_path, frame=frame, channel=channel)

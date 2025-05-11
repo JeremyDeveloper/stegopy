@@ -52,6 +52,7 @@ def main():
     parser.add_argument("-d", "--decode", action="store_true", help="Decode mode")
     parser.add_argument("-i", "--input", required=False, help="Input file (image/audio)")
     parser.add_argument("-o", "--output", required=False, help="Output file (encode only)")
+    parser.add_argument("--frame", type=int, help="Target a specific frame for animated images")
     parser.add_argument("--channel", choices=["r", "g", "b"], help="Color channel for image")
     parser.add_argument("--alpha", action="store_true", help="Use alpha channel for image")
     parser.add_argument("--region", choices=["center", "topleft", "topright", "bottomleft", "bottomright"], help="Use a specific image region")
@@ -96,7 +97,8 @@ def main():
             elif _is_image_file(args.input):
                 image_core.encode(
                     args.input, args.output, args.payload,
-                    region=args.region, channel=args.channel, alpha=args.alpha
+                    frame=args.frame, region=args.region, 
+                    channel=args.channel, alpha=args.alpha
                 )
             else:
                 print("❌ Unsupported file type for encoding. Only images and audio files are supported.")
@@ -106,6 +108,9 @@ def main():
             sys.exit(1)
         except UnsupportedFormatError:
             print("❌ Unsupported file format. Please provide a supported image or audio file format, such as a PNG, WEBP, WAV, AIFF, or any other supported format.")
+            sys.exit(1)
+        except ValueError as e:
+            print(f"❌ {e}")
             sys.exit(1)
         return
 
@@ -120,7 +125,8 @@ def main():
             elif _is_image_file(args.input):
                 message = image_core.decode(
                     args.input,
-                    region=args.region, channel=args.channel, alpha=args.alpha
+                    frame=args.frame, region=args.region, 
+                    channel=args.channel, alpha=args.alpha
                 )
             else:
                 print("❌ Unsupported file type for decoding. Only images and audio files are supported.")

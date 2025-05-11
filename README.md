@@ -170,7 +170,7 @@ Encode in the alpha layer:
 stegopy "ghost text" -e -i transparent.png -o result.png --alpha
 ```
 
-Combine with region targetting:
+Combine with region targeting:
 ```bash
 stegopy "top left green channel go brr" -e -i input.png -o out.png --channel g --region topleft
 ```

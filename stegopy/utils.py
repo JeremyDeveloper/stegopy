@@ -26,6 +26,8 @@ def _is_image_file(path: str) -> bool:
     Returns:
         bool: True if image, False otherwise.
     """
+    if path.lower().endswith(".webp"):
+        return True
     mimetype, _ = mimetypes.guess_type(path)
     return mimetype is not None and mimetype.startswith("image")
 

@@ -84,7 +84,7 @@ pip install stegopy
 
 (or install from source if you're a dev:)
 ```bash
-git clone https://github.com/JeremyDeveloper/stegopy
+git clone https://github.com/viodoescyber/stegopy
 cd stegopy
 pip install .
 ```

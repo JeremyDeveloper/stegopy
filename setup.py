@@ -5,12 +5,12 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="stegopy",
-    version="0.3.0",
-    author="JeremyDeveloper",
+    version="0.3.1",
+    author="viodoescyber",
     description="A deterministic, no-magic Python toolkit for hiding messages in media. Built with hyperfixation.",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/JeremyDeveloper/stegopy",
+    url="https://github.com/viodoescyber/stegopy",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

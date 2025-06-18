@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stegopy"
-version = "0.3.0"
+version = "0.3.1"
 description = "A deterministic, no-magic Python toolkit for hiding messages in media. Built with hyperfixation."
 readme = "README.md"
 requires-python = ">=3.7"
@@ -16,16 +16,16 @@ classifiers = [
     "Operating System :: OS Independent"
 ]
 authors = [
-    { name = "JeremyDeveloper" }
+    { name = "viodoescyber" }
 ]
 dependencies = [
     "Pillow >= 11.2.1"
 ]
 
 [project.urls]
-Homepage = "https://github.com/JeremyDeveloper/stegopy"
-Repository = "https://github.com/JeremyDeveloper/stegopy"
-Issues = "https://github.com/JeremyDeveloper/stegopy/issues"
+Homepage = "https://github.com/viodoescyber/stegopy"
+Repository = "https://github.com/viodoescyber/stegopy"
+Issues = "https://github.com/viodoescyber/stegopy/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
